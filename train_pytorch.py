@@ -49,8 +49,13 @@ def train(args):
     criterion = nn.CrossEntropyLoss(ignore_index=255).cuda()
 
     # Create Optimizer and freeze backbone
-    for param in model.backbone.features.parameters():
-        param.requires_grad = False
+    if args.model_type=='vanilla':
+        for param in model.backbone.features.parameters():
+            param.requires_grad = False
+    else:
+        for param in model.backbone_features.parameters():
+            param.requires_grad = False
+
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     # Training/Val Loop
