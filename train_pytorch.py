@@ -6,6 +6,7 @@ import argparse
 import torch.nn as nn
 import tqdm
 import torch.optim as optim
+from sklearn.metrics import precision_recall_fscore_support
 
 def train(args):
     total_classes = 64
@@ -35,7 +36,7 @@ def train(args):
     ])
     val_dataset = torchvision.datasets.ImageFolder(validate_input_folder,
                                                      transform=val_transform)
-    val_loader = data.DataLoader(val_dataset, batch_size=1,
+    val_loader = data.DataLoader(val_dataset, batch_size=args.batch_size,
                                    shuffle=False, num_workers=args.num_workers)
 
     # Create Model
@@ -63,12 +64,34 @@ def train(args):
             loss = criterion(pred, label)
             loss.backward()
             optimizer.step()
-
         if epoch % val_every_nepochs == 0:
             model.eval()
             with torch.no_grad():
+                correct = 0.0
+                metrics = {'macro': {'prec': 0.0, 'rec': 0.0, 'fscore': 0.0},
+                           'micro': {'prec': 0.0, 'rec': 0.0, 'fscore': 0.0},
+                           'weighted': {'prec': 0.0, 'rec': 0.0, 'fscore': 0.0}}
+
                 for image, label in tqdm_val:
+                    image = image.cuda()
                     pred = model(image)
+                    pred_labels = pred.detach().cpu().argmax(dim=1)
+                    for key in metrics.keys():
+                        prec, recall, fscore, _ = precision_recall_fscore_support(label, pred_labels,
+                                                                                  average=key)
+                        metrics[key]['prec'] += prec
+                        metrics[key]['rec'] += recall
+                        metrics[key]['fscore'] += fscore
+                        correct += (pred_labels == label).sum().item()
+                print('Accuracy ', correct/(len(tqdm_val)*args.batch_size))
+                for key in metrics.keys():
+                    print(' Metric %s: prec rec fscore'%key)
+                    out_str = ''
+                    for k2 in metrics[key].keys():
+                        metrics[key][k2] /= (len(tqdm_val)*args.batch_size)
+                        out_str += str(metrics[key][k2]) + ' '
+                    print(out_str)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
