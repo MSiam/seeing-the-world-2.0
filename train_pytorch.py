@@ -55,6 +55,7 @@ def train(args):
     tqdm_val = tqdm.tqdm(val_loader)
     model.train()
     for epoch in range(args.nepochs):
+        print('Epoch ', epoch)
         for image, label in tqdm_train:
             image = image.cuda()
             label = label.cuda()
@@ -82,7 +83,7 @@ def train(args):
                         metrics[key]['prec'] += prec
                         metrics[key]['rec'] += recall
                         metrics[key]['fscore'] += fscore
-                        correct += (pred_labels == label).sum().item()
+                    correct += (pred_labels == label).sum().item()
                 print('Accuracy ', correct/(len(tqdm_val)*args.batch_size))
                 for key in metrics.keys():
                     print(' Metric %s: prec rec fscore'%key)
