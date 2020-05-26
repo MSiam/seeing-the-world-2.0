@@ -51,11 +51,10 @@ def train(args):
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     # Training/Val Loop
-    tqdm_train = tqdm.tqdm(train_loader)
-    tqdm_val = tqdm.tqdm(val_loader)
-    model.train()
     for epoch in range(args.nepochs):
         print('Epoch ', epoch)
+        tqdm_train = tqdm.tqdm(train_loader)
+        model.train()
         for image, label in tqdm_train:
             image = image.cuda()
             label = label.cuda()
@@ -73,6 +72,7 @@ def train(args):
                            'micro': {'prec': 0.0, 'rec': 0.0, 'fscore': 0.0},
                            'weighted': {'prec': 0.0, 'rec': 0.0, 'fscore': 0.0}}
 
+                tqdm_val = tqdm.tqdm(val_loader)
                 for image, label in tqdm_val:
                     image = image.cuda()
                     pred = model(image)
@@ -92,7 +92,6 @@ def train(args):
                         metrics[key][k2] /= (len(tqdm_val)*args.batch_size)
                         out_str += str(metrics[key][k2]) + ' '
                     print(out_str)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
