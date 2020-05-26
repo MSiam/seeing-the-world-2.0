@@ -7,6 +7,7 @@ import torch.nn as nn
 import tqdm
 import torch.optim as optim
 from sklearn.metrics import precision_recall_fscore_support
+from model import VanillaVGG19, CosSimVGG19
 
 def train(args):
     total_classes = 64
@@ -40,13 +41,15 @@ def train(args):
                                    shuffle=False, num_workers=args.num_workers)
 
     # Create Model
-    model = torchvision.models.vgg19(pretrained=True)
-    model.classifier[6] = nn.Linear(4096, total_classes, bias=True)
+    if args.model_type == 'vanilla':
+        model = VanillaVGG19(num_classes=total_classes)
+    else:
+        model = CosSimVGG19(num_classes=total_classes)
     model = model.cuda()
     criterion = nn.CrossEntropyLoss(ignore_index=255).cuda()
 
     # Create Optimizer and freeze backbone
-    for param in model.features.parameters():
+    for param in model.backbone.features.parameters():
         param.requires_grad = False
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
@@ -89,13 +92,15 @@ def train(args):
                     print(' Metric %s: prec rec fscore'%key)
                     out_str = ''
                     for k2 in metrics[key].keys():
-                        metrics[key][k2] /= (len(tqdm_val)*args.batch_size)
+                        metrics[key][k2] /= (len(tqdm_val))
                         out_str += str(metrics[key][k2]) + ' '
                     print(out_str)
+                torch.save(model.state_dict(), 'ckpt.pth')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-data_dir', type=str)
+    parser.add_argument('-model_type', type=str, default='vanilla')
     parser.add_argument('-batch_size', type=int, default=30)
     parser.add_argument('-nepochs', type=int, default=80)
     parser.add_argument('-num_workers', type=int, default=1)
