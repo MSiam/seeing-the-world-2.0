@@ -26,10 +26,11 @@ plt.xticks(range(len(nclasses.keys())), nclasses.keys(), rotation='vertical')
 #plt.show()
 
 # Fewshot classes
-import pdb; pdb.set_trace()
 clsses = np.array([*nclasses.keys()])
 ns = np.array([*nclasses.values()])
 print('Few-shot Classes with less than 20 samples : ', clsses[ns<20])
+np.save('fewshot_classes.npy', clsses[ns<20])
+
 # 64 Total Classes
 # 37 Classes with Fewshot data <20
 
