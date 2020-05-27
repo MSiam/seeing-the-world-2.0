@@ -41,44 +41,41 @@ def test(args):
                    'micro': {'prec': 0.0, 'rec': 0.0, 'fscore': 0.0},
                    'weighted': {'prec': 0.0, 'rec': 0.0, 'fscore': 0.0}}
 
-        score_cls = {}
+        labels = None
+        preds = None
         count_cls = {}
-	for image, label in tqdm_val:
-	    image = image.cuda()
-	    pred = model(image)
-	    pred_labels = pred.detach().cpu().argmax(dim=1)
-	    for key in metrics.keys():
-		prec, recall, fscore, _ = precision_recall_fscore_support(label, pred_labels,
-									  average=key)
-		metrics[key]['prec'] += prec
-		metrics[key]['rec'] += recall
-		metrics[key]['fscore'] += fscore
-	    correct += (pred_labels == label).sum().item()
-	    for i in range(label.shape[0]):
-	      cls = int(label[i])
-	      if cls not in fscore_cls:
-		fscore_cls[cls] = 0.0
-		count_cls[cls] = 0.0
-	      _, _, fscore, _ = precision_recall_fscore_support(label[i].unsqueeze(0),
-								pred_labels[i].unsqueeze(0),
-								average='macro')
-	      fscore_cls[cls] += fscore
-	      count_cls[cls] += 1
+        for image, label in tqdm_val:
+            image = image.cuda()
+            pred = model(image)
+            pred_labels = pred.detach().cpu().argmax(dim=1)
+            if labels is None:
+              labels = label
+              preds = pred_labels
+            else:
+              labels = torch.cat((labels, label), dim=0)
+              preds = torch.cat((preds, pred_labels), dim=0)
 
-	print('Accuracy ', correct/(len(tqdm_val)*batch_size))
-	for key in metrics.keys():
-	    print(' Metric %s: prec rec fscore'%key)
-	    out_str = ''
-	    for k2 in metrics[key].keys():
-		metrics[key][k2] /= (len(tqdm_val))
-		out_str += str(metrics[key][k2]) + ' '
-	    print(out_str)
-	print('Fscore per class ')
-	for cls, fscore in fscore_cls.items():
-	  if count_cls[cls] == 0:
-	    print('CLass doesnt exist in val')
-	  else:
-	    print('CLass ', cls, ' ', fscore/count_cls[cls])
+            for key in metrics.keys():
+                prec, recall, fscore, _ = precision_recall_fscore_support(label, pred_labels,
+                                                                          average=key)
+                metrics[key]['prec'] += prec
+                metrics[key]['rec'] += recall
+                metrics[key]['fscore'] += fscore
+            correct += (pred_labels == label).sum().item()
+
+        print('Accuracy ', correct/(len(tqdm_val)*batch_size))
+        for key in metrics.keys():
+            print(' Metric %s: prec rec fscore'%key)
+            out_str = ''
+            for k2 in metrics[key].keys():
+                metrics[key][k2] /= (len(tqdm_val))
+                out_str += str(metrics[key][k2]) + ' '
+            print(out_str)
+
+        print('Fscore per class ')
+        prec, recall, fscore, sprt = precision_recall_fscore_support(labels, preds, average=None)
+        for i in range(len(fscore)):
+          print('Class : ', i, 'Fscore : ', fscore[i], ' Support: ', sprt[i])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
